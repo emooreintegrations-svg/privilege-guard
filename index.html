@@ -56,14 +56,18 @@
     position: absolute;
     top: 32px;
     right: 0;
-    color: #9ca3af;
+    color: #b0b0b0;
     text-decoration: none;
-    font-size: 12px;
-    font-weight: 400;
     transition: color 0.15s ease;
+    display: flex;
+    align-items: center;
+  }
+  .header-link svg {
+    width: 22px;
+    height: 22px;
   }
   .header-link:hover {
-    color: #6b7280;
+    color: #1a1a1a;
   }
   .workspace {
     display: grid;
@@ -402,7 +406,7 @@
     <h1>Privilege Guard <span>beta</span></h1>
     <p class="subtitle">Scan it. Strip it. Share it.</p>
     <div class="privacy-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Your data never leaves this browser</div>
-    <a href="https://mooremily.com" target="_blank" rel="noopener" class="header-link">by Emily Moore</a>
+    <a href="https://mooremily.com" target="_blank" rel="noopener" class="header-link" title="mooremily.com"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>
   </header>
   <div class="controls">
     <button class="primary" onclick="sanitize()">Scan &amp; Sanitize</button>
