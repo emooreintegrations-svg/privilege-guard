@@ -132,11 +132,90 @@
     margin-bottom: 24px;
     flex-wrap: wrap;
   }
-  .output-actions {
+  .export-dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  .export-trigger {
+    background: none;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
     display: flex;
-    gap: 10px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #6b7280;
+    transition: all 0.15s;
+  }
+  .export-trigger:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #374151;
+  }
+  .export-trigger:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .export-trigger:disabled:hover {
+    background: none;
+    border-color: #e5e5e5;
+    color: #6b7280;
+  }
+  .export-trigger svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .export-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+    min-width: 180px;
+    overflow: hidden;
+  }
+  .export-menu.open {
+    display: block;
+  }
+  .export-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 0;
+  }
+  .export-menu-item:hover {
+    background: #f3f4f6;
+    border: none;
+  }
+  .export-menu-item svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
   }
   button {
     padding: 10px 20px;
@@ -311,7 +390,7 @@
 <div class="container">
   <header>
     <h1>Privilege Guard <span>beta</span></h1>
-    <p class="subtitle">Sanitize legal documents before sharing with AI. Protect privilege. Keep practicing.</p>
+    <p class="subtitle">Strip it. Scan it. Share it.</p>
     <div class="privacy-badge">100% client-side — your data never leaves this browser</div>
   </header>
   <div class="controls">
@@ -357,17 +436,31 @@ Everything runs in your browser. Nothing is transmitted."></textarea>
     </div>
     <div class="panel">
       <div class="panel-header">
-        Sanitized Output
-        <span class="count" id="outputCount"></span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          Sanitized Output
+          <span class="count" id="outputCount"></span>
+        </div>
+        <div class="export-dropdown" id="exportDropdown">
+          <button class="export-trigger" id="exportBtn" disabled onclick="toggleExportMenu()" title="Export options">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;margin-left:-2px;"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="export-menu" id="exportMenu">
+            <button class="export-menu-item" onclick="copyOutput()">
+              <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy to clipboard
+            </button>
+            <button class="export-menu-item" onclick="downloadOutput()">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export as .txt
+            </button>
+          </div>
+        </div>
       </div>
       <div class="output-area" id="outputArea">
         <div class="empty-state">Sanitized document will appear here after scanning.</div>
       </div>
     </div>
-  </div>
-  <div class="output-actions">
-    <button onclick="copyOutput()" id="copyBtn" disabled>Copy Sanitized Text</button>
-    <button class="export" onclick="downloadOutput()" id="downloadBtn" disabled>Export .txt</button>
   </div>
   <footer>
     <div>&copy; 2026 <a href="https://mooremily.com">Emily Moore</a>. All rights reserved.</div>
@@ -866,8 +959,7 @@ function renderOutput() {
   if (activeDetections.length === 0) {
     outputArea.innerHTML = text || '<div class="empty-state">Sanitized document will appear here after scanning.</div>';
     document.getElementById('outputCount').textContent = '';
-    document.getElementById('copyBtn').disabled = true;
-    document.getElementById('downloadBtn').disabled = true;
+    document.getElementById('exportBtn').disabled = true;
     return;
   }
 
@@ -890,8 +982,7 @@ function renderOutput() {
   outputArea.dataset.plainText = plainText;
   const count = activeDetections.length;
   document.getElementById('outputCount').textContent = `${count} redaction${count !== 1 ? 's' : ''}`;
-  document.getElementById('copyBtn').disabled = false;
-  document.getElementById('downloadBtn').disabled = false;
+  document.getElementById('exportBtn').disabled = false;
 }
 
 function renderDetections() {
@@ -988,18 +1079,32 @@ function flashMessage(msg) {
 }
 
 // ── Export Functions ─────────────────────────────────
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  const btn = document.getElementById('exportBtn');
+  if (btn.disabled) return;
+  menu.classList.toggle('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const dropdown = document.getElementById('exportDropdown');
+  if (dropdown && !dropdown.contains(e.target)) {
+    document.getElementById('exportMenu').classList.remove('open');
+  }
+});
+
 function copyOutput() {
+  document.getElementById('exportMenu').classList.remove('open');
   const outputArea = document.getElementById('outputArea');
   const text = outputArea.dataset.plainText || outputArea.textContent;
   navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('copyBtn');
-    const original = btn.textContent;
-    btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = original, 1500);
+    flashMessage('Copied to clipboard!');
   });
 }
 
 function downloadOutput() {
+  document.getElementById('exportMenu').classList.remove('open');
   const outputArea = document.getElementById('outputArea');
   const text = outputArea.dataset.plainText || outputArea.textContent;
   const blob = new Blob([text], { type: 'text/plain' });
@@ -1009,6 +1114,7 @@ function downloadOutput() {
   a.download = 'sanitized_document.txt';
   a.click();
   URL.revokeObjectURL(url);
+  flashMessage('File downloaded!');
 }
 
 // ── Sample Document ─────────────────────────────────
@@ -1050,8 +1156,8 @@ function clearAll() {
   document.getElementById('outputArea').dataset.plainText = '';
   document.getElementById('detectionsPanel').style.display = 'none';
   document.getElementById('outputCount').textContent = '';
-  document.getElementById('copyBtn').disabled = true;
-  document.getElementById('downloadBtn').disabled = true;
+  document.getElementById('exportBtn').disabled = true;
+  document.getElementById('exportMenu').classList.remove('open');
   detections = [];
 }
 </script>
