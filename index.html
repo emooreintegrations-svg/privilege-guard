@@ -18,6 +18,7 @@
     padding: 20px;
   }
   header {
+    position: relative;
     padding: 32px 0 24px;
     border-bottom: 1px solid #e5e5e5;
     margin-bottom: 28px;
@@ -40,20 +41,29 @@
   .privacy-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #166534;
+    gap: 5px;
+    color: #9ca3af;
     font-size: 12px;
-    font-weight: 500;
-    padding: 4px 10px;
-    border-radius: 20px;
+    font-weight: 400;
     margin-top: 10px;
   }
-  .privacy-badge::before {
-    content: "&#9679;";
-    color: #22c55e;
-    font-size: 8px;
+  .privacy-badge svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+  .header-link {
+    position: absolute;
+    top: 32px;
+    right: 0;
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 400;
+    transition: color 0.15s ease;
+  }
+  .header-link:hover {
+    color: #6b7280;
   }
   .workspace {
     display: grid;
@@ -390,8 +400,9 @@
 <div class="container">
   <header>
     <h1>Privilege Guard <span>beta</span></h1>
-    <p class="subtitle">Strip it. Scan it. Share it.</p>
-    <div class="privacy-badge">100% client-side &mdash; your data never leaves this browser</div>
+    <p class="subtitle">Scan it. Strip it. Share it.</p>
+    <div class="privacy-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Your data never leaves this browser</div>
+    <a href="https://mooremily.com" target="_blank" rel="noopener" class="header-link">by Emily Moore</a>
   </header>
   <div class="controls">
     <button class="primary" onclick="sanitize()">Scan &amp; Sanitize</button>
@@ -470,12 +481,13 @@ Everything runs in your browser. Nothing is transmitted."></textarea>
 </div>
 <script>
 // =======================================================
-// PRIVILEGE GUARD v2 &mdash; Client-Side Document Sanitization
+// PRIVILEGE GUARD v3 &mdash; Client-Side Document Sanitization
 // =======================================================
 let detections = [];
 let enabledCategories = new Set([
   'PERSON', 'ORG', 'EMAIL', 'PHONE', 'SSN',
-  'AMOUNT', 'DATE', 'CASE_NUM', 'ADDRESS', 'EIN', 'ACCOUNT', 'CUSTOM'
+  'AMOUNT', 'DATE', 'CASE_NUM', 'ADDRESS', 'EIN', 'ACCOUNT',
+  'VIN', 'IBAN', 'CRYPTO', 'NPI', 'MRN', 'DEA', 'PASSPORT', 'DL', 'DOB', 'CUSTOM'
 ]);
 
 // -- Pattern Definitions ------------------------------
@@ -512,8 +524,45 @@ const patterns = {
     label: 'Date'
   },
   CASE_NUM: {
-    regex: /\b(?:No\.|Case No\.|Docket No\.|Civil Action No\.|Crim\. No\.)\s*[\w\-:]+(?:\s*\([\w\s.]+\))?/gi,
+    regex: /\b(?:Case\s+No\.|Docket\s+No\.|Civil\s+Action\s+No\.|Crim\.\s+No\.|File\s+No\.|Cause\s+No\.|Index\s+No\.|Claim\s+No\.|Matter\s+No\.|Appeal\s+No\.)\s*:?\s*[\w\-]+(?:[\w\-:]+)*(?:\s*\([\w\s.]+\))?/gi,
     label: 'Case #'
+  },
+  // -- Expanded PII patterns (V3) --
+  VIN: {
+    regex: /\b(?:VIN|Vehicle\s+Identification(?:\s+Number)?)[:\s#]*[A-HJ-NPR-Z0-9]{17}\b/gi,
+    label: 'VIN'
+  },
+  IBAN: {
+    regex: /\b[A-Z]{2}\d{2}[\s]?[\dA-Z]{4}[\s]?(?:[\dA-Z]{4}[\s]?){2,7}[\dA-Z]{1,4}\b/g,
+    label: 'IBAN'
+  },
+  CRYPTO: {
+    regex: /\b(?:(?:1|3|bc1)[A-HJ-NP-Za-km-z1-9]{25,62}|0x[0-9a-fA-F]{40})\b/g,
+    label: 'Crypto Address'
+  },
+  NPI: {
+    regex: /\b(?:NPI|National\s+Provider(?:\s+Identifier)?)[:\s#]*\d{10}\b/gi,
+    label: 'NPI'
+  },
+  MRN: {
+    regex: /\b(?:MRN|Medical\s+Record(?:\s+Number)?|Patient\s+ID|Chart\s+No\.?)[:\s#]*[\w\-]{4,20}\b/gi,
+    label: 'Medical Record #'
+  },
+  DEA: {
+    regex: /\b(?:DEA(?:\s+No\.?)?)[:\s#]*[A-Z]{2}\d{7}\b/gi,
+    label: 'DEA #'
+  },
+  PASSPORT: {
+    regex: /\b(?:Passport(?:\s+No\.?)?)[:\s#]*[A-Z0-9]{6,12}\b/gi,
+    label: 'Passport #'
+  },
+  DL: {
+    regex: /\b(?:(?:Driver'?s?\s+)?License(?:\s+No\.?)?|DL(?:\s+No\.?)?)[:\s#]*[A-Z0-9\-]{5,15}\b/gi,
+    label: 'License #'
+  },
+  DOB: {
+    regex: /\b(?:DOB|Date\s+of\s+Birth|Born)[:\s]+(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})\b/gi,
+    label: 'DOB'
   }
 };
 
@@ -542,7 +591,7 @@ const commonFirstNames = new Set([
   'eli','elliot','emmett','felix','finn','floyd','forrest','francis','frederick','garrett',
   'gavin','geoffrey','gilbert','glen','gordon','grant','grayson','griffin','grover','gus',
   'harrison','harvey','hayden','heath','hector','herman','howard','hudson','hugo','hunter',
-  'irving','ivan','jace','jared','jesse','joel','jonah','jordan','jorge','julian',
+  'irving','ivan','jace','jared','jesse','joel','jonah','jordan','jorge','julian','nikolai','declan',
   'karl','lance','landon','lawrence','lee','leon','leonard','levi','lincoln','lloyd',
   'lorenzo','luca','luis','luke','lyle','marcus','mario','marshall','marvin','max',
   'maxwell','miles','mitchell','morgan','nelson','nolan','oliver','omar','orlando','oscar',
@@ -616,42 +665,168 @@ const legalTitles = new Set([
   'respondent','appellant','appellee','magistrate','honorable','hon.'
 ]);
 
+// -- Stop-Words: NEVER classify these as person names or org aliases --
+const nameStopWords = new Set([
+  // Medical / scientific terms
+  'medical','clinical','surgical','hospital','blood','plasma','tissue','cardiac','neural','renal',
+  'hepatic','gastric','pulmonary','vascular','lymph','tumor','biopsy','pathology','diagnosis',
+  'prognosis','chronic','acute','benign','malignant','bilateral','anterior','posterior','lateral',
+  'proximal','distal','cervical','thoracic','lumbar','sacral','cranial','spinal','cerebral',
+  'cortical','subcortical','pharmaceutical','therapeutic','diagnostic','radiological','anesthesia',
+  'orthopedic','pediatric','obstetric','psychiatric','neurological','dermatological','oncological',
+  'hematological','immunological','endocrine','metabolic','genetic','molecular','cellular',
+  // Legal / document terms
+  'patent','copyright','trademark','license','filed','granted','issued','denied','pending',
+  'appeal','motion','petition','brief','memorandum','opinion','order','decree','judgment',
+  'verdict','settlement','statute','regulation','ordinance','provision','clause','section',
+  'article','paragraph','subsection','exhibit','appendix','addendum','amendment','supplement',
+  'affidavit','deposition','interrogatory','subpoena','summons','warrant','injunction',
+  'restraining','preliminary','final','temporary','permanent','stipulation','plea','arraignment',
+  'indictment','prosecution','conviction','acquittal','sentencing','probation','parole',
+  'incarceration','restitution','forfeiture','extradition','jurisdiction','venue','standing',
+  // Geographic / place words
+  'park','lake','river','mountain','valley','hill','creek','spring','falls','ridge',
+  'forest','grove','meadow','prairie','canyon','mesa','cliff','harbor','bay','island',
+  'peninsula','cape','point','beach','shore','coast','north','south','east','west',
+  'central','upper','lower','greater','inner','outer','county','district','borough',
+  'township','village','hamlet','precinct','ward','zone','region','territory','province',
+  // Common English words that get false-positived
+  'grant','grace','hope','faith','joy','may','june','august','mark','bill','frank',
+  'chase','drew','hunter','mason','carter','tyler','jordan','morgan','taylor','bailey',
+  'court','bench','bar','chambers','clerk','docket','record','file','case','matter',
+  'trust','estate','will','deed','lien','title','bond','note','draft','claim',
+  'motion','brief','order','notice','demand','offer','acceptance','release','waiver',
+  // Technology / business terms
+  'digital','virtual','cloud','cyber','quantum','nano','micro','macro','proto','meta',
+  'blockchain','crypto','token','mining','network','server','database','algorithm','protocol',
+  'interface','platform','module','component','framework','library','runtime','kernel',
+  'software','hardware','firmware','silicon','circuit','sensor','device','machine','robot',
+  'automated','autonomous','intelligent','adaptive','dynamic','static','hybrid','modular',
+  // State names that could be confused with person names
+  'virginia','georgia','carolina','dakota','montana','indiana','missouri','oregon','florida',
+  'california','colorado','arizona','alaska','alabama','kansas','kentucky','oklahoma','tennessee',
+  'minnesota','wisconsin','michigan','connecticut','mississippi','louisiana','maryland',
+  // Roles / titles that appear standalone
+  'plaintiff','defendant','petitioner','respondent','appellant','appellee','claimant',
+  'beneficiary','executor','administrator','trustee','guardian','conservator','custodian',
+  'fiduciary','attorney','counsel','advocate','solicitor','barrister','magistrate',
+  'commissioner','arbitrator','mediator','examiner','inspector','auditor','assessor',
+  'prosecutor','investigator','detective','officer','sergeant','lieutenant','captain',
+  'commander','director','manager','supervisor','coordinator','administrator','secretary',
+  'treasurer','comptroller','chancellor','provost','dean','professor','instructor',
+  // Misc false positive magnets
+  'national','international','federal','state','local','regional','municipal','metropolitan',
+  'public','private','general','special','common','standard','basic','primary','secondary',
+  'initial','final','total','net','gross','annual','monthly','quarterly','weekly','daily',
+  'united','american','european','asian','african','pacific','atlantic','western','eastern',
+  'northern','southern','superior','supreme','circuit','district','appellate','juvenile',
+  'probate','bankruptcy','administrative','regulatory','legislative','executive','judicial'
+]);
+
 function detectNames(text) {
   const results = [];
   const seen = new Set();
   const knownSurnames = new Set();
 
+  // Unicode character class ranges for international name support (Latin-1 Supplement)
+  // Uppercase: A-Z + accented uppercase (À-Ö, Ø-Þ)
+  // Lowercase: a-z + accented lowercase (ß-ö, ø-ÿ, ñ)
+  const U = "A-Z\u00C0-\u00D6\u00D8-\u00DE";
+  const L = "a-z\u00DF-\u00F6\u00F8-\u00FF";
+
+  // Build surname fragment for new RegExp() - handles compound surnames with diacritics
+  // O'Brien | McCarthy | Van der Berg | hyphenated | St. Claire
+  const SF = "(?:" +
+    "(?:O['\u2019][" + U + "][" + L + "]+)" +               // O'Brien, O'Malley
+    "|(?:(?:Mc|Mac)[" + U + "][" + L + "]+)" +               // McCarthy, MacDonald
+    "|(?:(?:Van|Von|De|Di|La|Le|Del|Della|El|Al|St\\.?)\\s+(?:[" + L + "]+\\s+)*[" + U + "][" + L + "]+)" + // Van der Berg, De la Cruz
+    "|(?:[" + U + "][" + L + "]{1,20}(?:-[" + U + "][" + L + "]{1,20})*))" ; // Smith, García, Osei-Mensah
+  const SX = "(?:\\s+(?:Jr|Sr|II|III|IV|Esq)\\.?)?";  // optional suffix
+
   // Strategy 1: Title + Name pattern (Dr. Patricia Nakamura, etc.)
-  const titledPattern = /(?:Mr|Mrs|Ms|Dr|Prof|Hon|Judge|Justice|Attorney|Atty|Rev)\.?\s+([A-Z][a-z]{1,20}(?:\s+[A-Z]\.?\s+)?[A-Z][a-z]{1,20}(?:\s+(?:Jr|Sr|II|III|IV|Esq)\.?)?)/g;
+  const titledPattern = new RegExp("(?:Mr|Mrs|Ms|Dr|Prof|Hon|Judge|Justice|Attorney|Atty|Rev)\\.?\\s+([" + U + "][" + L + "]{1,20}(?:\\s+[" + U + "]\\.?)?\\s+" + SF + SX + ")", "g");
   let match;
   while ((match = titledPattern.exec(text)) !== null) {
     const key = match.index + ':' + match[0];
     if (!seen.has(key)) {
       seen.add(key);
       results.push({ text: match[0], start: match.index, end: match.index + match[0].length, type: 'PERSON' });
-      // Track surname
-      const words = match[0].trim().split(/\s+/);
-      if (words.length >= 2) knownSurnames.add(words[words.length - 1]);
+      // Track surname - extract last meaningful word(s)
+      const fullText = match[0].trim();
+      const words = fullText.split(/\s+/);
+      if (words.length >= 2) {
+        const lastWord = words[words.length - 1];
+        if (!nameSuffixes.has(lastWord.toLowerCase())) {
+          knownSurnames.add(lastWord);
+          if (words.length >= 3) {
+            const possibleCompound = words.slice(-2).join(' ');
+            if (/^(?:Van|Von|De|Di|La|Le|Del|Della|El|Al|St\.?)\s/i.test(possibleCompound)) {
+              knownSurnames.add(possibleCompound);
+            }
+          }
+        } else if (words.length >= 3) {
+          knownSurnames.add(words[words.length - 2]);
+        }
+      }
     }
   }
 
-  // Strategy 2: Two-word capitalized names where first word is a common first name
-  const simpleNamePattern = /\b([A-Z][a-z]{1,20})[ \t]+([A-Z][a-z]{1,20})\b/g;
+  // Strategy 2a: Three-word names FIRST (Rajesh Kumar Patel, Mary Jane Watson)
+  // Run before two-word to prevent two-word from consuming three-word matches
+  const threeWordPattern = new RegExp("\\b([" + U + "][" + L + "]{1,20})[ \\t]+([" + U + "][" + L + "]{1,20})[ \\t]+(" + SF + ")" + SX + "\\b", "g");
+  while ((match = threeWordPattern.exec(text)) !== null) {
+    const firstName = match[1].toLowerCase();
+    const middleName = match[2].toLowerCase();
+    if (commonFirstNames.has(firstName) && !nameStopWords.has(middleName)) {
+      const orgWords = new Set(['inc','llc','llp','corp','corporation','company','ltd','limited','partners','partnership','group','associates','technologies','boulevard','street','avenue']);
+      const lastPart = match[0].split(/[ \t]+/).pop().replace(/\.?$/, '').toLowerCase();
+      if (!orgWords.has(lastPart) && !nameStopWords.has(lastPart)) {
+        const key = match.index + ':' + match[0];
+        if (!seen.has(key)) {
+          const overlaps = results.some(r =>
+            (match.index >= r.start && match.index < r.end) ||
+            (r.start >= match.index && r.start < match.index + match[0].length));
+          if (!overlaps) {
+            seen.add(key);
+            results.push({ text: match[0].trim(), start: match.index, end: match.index + match[0].length, type: 'PERSON' });
+            const words = match[0].trim().split(/\s+/);
+            knownSurnames.add(words[words.length - 1]);
+            knownSurnames.add(words[1]); // middle name as possible surname
+          }
+        }
+      }
+    } else {
+      // Reset lastIndex to retry from next character (prevent skipping valid pairs)
+      threeWordPattern.lastIndex = match.index + 1;
+    }
+  }
+
+  // Strategy 2b: CommonFirstName + Surname (handles compound surnames with diacritics)
+  const simpleNamePattern = new RegExp("\\b([" + U + "][" + L + "]{1,20})[ \\t]+(" + SF + ")" + SX + "\\b", "g");
   while ((match = simpleNamePattern.exec(text)) !== null) {
     const firstName = match[1].toLowerCase();
     if (commonFirstNames.has(firstName)) {
       const orgWords = new Set(['inc','llc','llp','corp','corporation','company','ltd','limited','partners','partnership','group','associates','technologies','boulevard','street','avenue']);
-      if (!orgWords.has(match[2].toLowerCase())) {
+      const surnameText = match[0].split(/[ \t]+/).slice(1).join(' ').replace(/\s+(?:Jr|Sr|II|III|IV|Esq)\.?$/i, '');
+      const lastWord = surnameText.split(/[\s\-]+/).pop().toLowerCase();
+      if (!orgWords.has(lastWord) && !nameStopWords.has(lastWord) && !nameStopWords.has(firstName)) {
         const key = match.index + ':' + match[0];
         if (!seen.has(key)) {
           const overlaps = results.some(r => match.index >= r.start && match.index < r.end);
           if (!overlaps) {
             seen.add(key);
-            results.push({ text: match[0], start: match.index, end: match.index + match[0].length, type: 'PERSON' });
-            knownSurnames.add(match[2]);
+            results.push({ text: match[0].trim(), start: match.index, end: match.index + match[0].length, type: 'PERSON' });
+            const surnameWords = surnameText.trim().split(/\s+/);
+            const finalSurname = surnameWords[surnameWords.length - 1];
+            knownSurnames.add(finalSurname);
+            if (/^(?:O['\u2019]|Mc|Mac)/i.test(surnameText)) knownSurnames.add(surnameText.trim());
+            if (/^(?:Van|Von|De|Di|La|Le|Del|Della|El|Al|St\.?)\s/i.test(surnameText)) knownSurnames.add(surnameText.trim());
           }
         }
       }
+    } else {
+      // Reset lastIndex to retry from next character (prevent "Attorney Sarah" consuming "Sarah Goldstein")
+      simpleNamePattern.lastIndex = match.index + 1;
     }
   }
 
@@ -662,7 +837,7 @@ function detectNames(text) {
     if (commonFirstNames.has(firstLower)) {
       // Exclude common all-caps non-name pairs
       const skipWords = new Set(['the','and','for','not','but','are','was','has','had','will','can','may','its','all','any','per','via']);
-      if (!skipWords.has(match[2].toLowerCase())) {
+      if (!skipWords.has(match[2].toLowerCase()) && !nameStopWords.has(match[1].toLowerCase()) && !nameStopWords.has(match[2].toLowerCase())) {
         const key = match.index + ':' + match[0];
         if (!seen.has(key)) {
           const overlaps = results.some(r => match.index >= r.start && match.index < r.end);
@@ -682,6 +857,7 @@ function detectNames(text) {
   // Strategy 4: Surname tracking &mdash; catch standalone uses of known surnames
   for (const surname of knownSurnames) {
     if (surname.length < 3) continue; // skip very short
+    if (nameStopWords.has(surname.toLowerCase())) continue; // skip stop words
     const surnameRegex = new RegExp('\\b' + escapeRegex(surname) + '\\b', 'g');
     while ((match = surnameRegex.exec(text)) !== null) {
       const overlaps = results.some(r =>
@@ -902,6 +1078,7 @@ function sanitize() {
         const firstWord = significant[0].toLowerCase();
         if (contractTerms.has(firstWord)) continue;
         if (significant[0].length < 4 || tooGenericForAlias.has(firstWord)) continue;
+        if (nameStopWords.has(firstWord)) continue; // stop-word guard
         knownOrgNames.add(significant[0]);
         if (significant.length > 1) knownOrgNames.add(significant.slice(0, 2).join(' '));
       }
