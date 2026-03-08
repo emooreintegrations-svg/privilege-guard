@@ -19,9 +19,8 @@
   }
   header {
     position: relative;
-    padding: 32px 0 24px;
-    border-bottom: 1px solid #e5e5e5;
-    margin-bottom: 28px;
+    padding: 16px 0 6px;
+    margin-bottom: 8px;
   }
   h1 {
     font-size: 28px;
@@ -46,7 +45,7 @@
     color: #059669;
     font-size: 12px;
     font-weight: 500;
-    margin-top: 10px;
+    margin-top: 6px;
     padding: 5px 12px;
     border-radius: 999px;
     border: 1px solid #a7f3d0;
@@ -102,6 +101,7 @@
     color: #1a1a1a;
     resize: vertical;
     background: white;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
   }
   textarea::placeholder {
     color: #9ca3af;
@@ -117,6 +117,7 @@
     word-wrap: break-word;
     overflow-y: auto;
     max-height: 500px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
   }
   .output-area .redacted {
     background: #fef3c7;
@@ -130,7 +131,7 @@
   .controls {
     display: flex;
     gap: 10px;
-    margin-bottom: 24px;
+    margin-bottom: 14px;
     flex-wrap: wrap;
   }
   .export-dropdown {
@@ -230,16 +231,29 @@
     color: #374151;
   }
   button:hover {
-    background: #f9fafb;
+    background: #f3f4f6;
     border-color: #d1d5db;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  button:active {
+    transform: translateY(0.5px);
+    box-shadow: none;
   }
   button.primary {
     background: #1a1a1a;
     color: white;
     border-color: #1a1a1a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
   }
   button.primary:hover {
     background: #374151;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transform: translateY(-0.5px);
+  }
+  button.primary:active {
+    background: #111827;
+    transform: translateY(0.5px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   }
   button.export {
     background: #166534;
@@ -269,9 +283,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 0;
+    padding: 6px 4px;
+    margin: 0 -4px;
     border-bottom: 1px solid #f3f4f6;
+    border-radius: 4px;
     font-size: 13px;
+    transition: background 0.1s;
+  }
+  .detection-item:hover {
+    background: #f9fafb;
   }
   .detection-item:last-child {
     border-bottom: none;
@@ -373,10 +393,11 @@
   }
   footer {
     text-align: center;
-    padding: 24px 0;
+    padding: 18px 0;
     color: #9ca3af;
-    font-size: 12px;
-    border-top: 1px solid #e5e5e5;
+    font-size: 11.5px;
+    border-top: 1px solid #f0f0f0;
+    letter-spacing: 0.01em;
   }
   footer a {
     color: #6b7280;
@@ -402,7 +423,6 @@ window.nlpAvailable = false;
 <div class="container">
   <header>
     <h1>Privilege Guard <span>beta</span></h1>
-    <p class="subtitle">Scan it. Strip it. Share it.</p>
     <div class="privacy-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Your data never leaves this browser</div>
   </header>
   <div class="controls">
@@ -475,9 +495,8 @@ Everything runs in your browser. Nothing is transmitted."></textarea>
     </div>
   </div>
   <footer>
-    <div>&copy; 2026 <a href="https://mooremily.com">Emily Moore</a>. All rights reserved.</div>
-    <div style="margin-top:4px;">This tool processes text entirely in your browser. No data is stored, transmitted, or logged.</div>
-    <div style="margin-top:4px;font-style:italic;">Privilege Guard is an educational tool and does not constitute legal advice. Always consult qualified counsel regarding attorney-client privilege.</div>
+    <div>&copy; 2026 <a href="https://mooremily.com">Emily Moore</a> &middot; 100% client-side &middot; No data leaves your browser</div>
+    <div style="margin-top:4px;font-style:italic;">Educational tool only — not legal advice. Consult qualified counsel regarding privilege.</div>
   </footer>
 </div>
 <script>
@@ -1117,6 +1136,14 @@ function detectNER(text) {
 function sanitize() {
   const text = document.getElementById('inputText').value;
   if (!text.trim()) return;
+  // Brief scan animation on button
+  const scanBtn = document.querySelector('button.primary');
+  if (scanBtn) {
+    const originalText = scanBtn.textContent;
+    scanBtn.textContent = 'Scanning\u2026';
+    scanBtn.disabled = true;
+    setTimeout(() => { scanBtn.textContent = originalText; scanBtn.disabled = false; }, 400);
+  }
   detections = [];
   const counters = {};
   const entityMap = {};
