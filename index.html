@@ -42,32 +42,19 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: #9ca3af;
+    background: #ecfdf5;
+    color: #059669;
     font-size: 12px;
-    font-weight: 400;
+    font-weight: 500;
     margin-top: 10px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid #a7f3d0;
   }
   .privacy-badge svg {
     width: 13px;
     height: 13px;
     flex-shrink: 0;
-  }
-  .header-link {
-    position: absolute;
-    top: 32px;
-    right: 0;
-    color: #b0b0b0;
-    text-decoration: none;
-    transition: color 0.15s ease;
-    display: flex;
-    align-items: center;
-  }
-  .header-link svg {
-    width: 22px;
-    height: 22px;
-  }
-  .header-link:hover {
-    color: #1a1a1a;
   }
   .workspace {
     display: grid;
@@ -406,7 +393,6 @@
     <h1>Privilege Guard <span>beta</span></h1>
     <p class="subtitle">Scan it. Strip it. Share it.</p>
     <div class="privacy-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Your data never leaves this browser</div>
-    <a href="https://mooremily.com" target="_blank" rel="noopener" class="header-link" title="mooremily.com"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>
   </header>
   <div class="controls">
     <button class="primary" onclick="sanitize()">Scan &amp; Sanitize</button>
@@ -436,8 +422,8 @@
       <div class="panel-header">Original Document</div>
       <textarea id="inputText" placeholder="Paste your document text here...
 This tool will detect and replace:
-  &#8226; Person names (John Smith &rarr; [PERSON_1])
-  &#8226; Organizations (Acme Corp &rarr; [ORG_1])
+  &#8226; Person names (John Smith &#8594; [PERSON_1])
+  &#8226; Organizations (Acme Corp &#8594; [ORG_1])
   &#8226; Email addresses
   &#8226; Phone numbers
   &#8226; Social Security Numbers
@@ -485,7 +471,7 @@ Everything runs in your browser. Nothing is transmitted."></textarea>
 </div>
 <script>
 // =======================================================
-// PRIVILEGE GUARD v3 &mdash; Client-Side Document Sanitization
+// PRIVILEGE GUARD v3 — Client-Side Document Sanitization
 // =======================================================
 let detections = [];
 let enabledCategories = new Set([
@@ -493,11 +479,9 @@ let enabledCategories = new Set([
   'AMOUNT', 'DATE', 'CASE_NUM', 'ADDRESS', 'EIN', 'ACCOUNT',
   'VIN', 'IBAN', 'CRYPTO', 'NPI', 'MRN', 'DEA', 'PASSPORT', 'DL', 'DOB', 'CUSTOM'
 ]);
-
 // -- Pattern Definitions ------------------------------
 const streetTypes = '(?:Street|St|Avenue|Ave|Boulevard|Blvd|Road|Rd|Drive|Dr|Lane|Ln|Court|Ct|Place|Pl|Way|Circle|Cir|Parkway|Pkwy|Highway|Hwy|Route|Rte|Terrace|Ter|Trail|Trl|Row|Alley|Aly|Square|Sq|Loop|Run|Path|Pass|Pike|Crossing|Xing)';
 const stateNames = '(?:[A-Z]{2}|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New\\s+Hampshire|New\\s+Jersey|New\\s+Mexico|New\\s+York|North\\s+Carolina|North\\s+Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode\\s+Island|South\\s+Carolina|South\\s+Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West\\s+Virginia|Wisconsin|Wyoming)';
-
 const patterns = {
   SSN: {
     regex: /\b\d{3}[--]\d{2}[--]\d{4}\b/g,
@@ -569,13 +553,10 @@ const patterns = {
     label: 'DOB'
   }
 };
-
 // Build address patterns dynamically (with section-number guard)
-// (?<!\.\d) prevents matching "3.1 The Closing..." as an address
 const addressRegexFull = new RegExp('(?<!\\.)\\b\\d{1,5}\\s+(?:[A-Za-z]+\\.?\\s){1,5}' + streetTypes + '\\.?\\b(?:\\s*,?\\s*(?:Suite|Ste|Apt|Unit|Floor|Fl|Room|Rm|Bldg|Building|#)\\s*\\w+)?(?:\\s*,?\\s*[A-Z][a-z]+(?:[\\s-][A-Z]?[a-z]+)*)?(?:\\s*,?\\s*' + stateNames + ')?\\s*\\d{5}(?:-\\d{4})?\\b', 'gi');
 const addressRegexPartial = new RegExp('(?<!\\.)\\b\\d{1,5}\\s+(?:[A-Za-z]+\\.?\\s){1,5}' + streetTypes + '\\.?\\b(?:\\s*,?\\s*(?:Suite|Ste|Apt|Unit|Floor|Fl|#)\\s*\\w+)?(?:\\s*,?\\s*[A-Z][a-z]+(?:[\\s-][A-Z]?[a-z]+)*)?(?:\\s*,?\\s*' + stateNames + ')?\\b', 'gi');
 const addressRegexContextual = new RegExp('(?<!\\.)\\b(\\d{1,5}\\s+(?:[A-Za-z]+\\.?\\s){1,4}[A-Za-z]+,?\\s*(?:Suite|Ste|Apt|Unit|Floor|Fl|#)\\s*\\w+\\s*,\\s*[A-Z][a-z]+(?:[\\s-][A-Z]?[a-z]+)*\\s*,\\s*' + stateNames + '\\s*\\d{5}(?:-\\d{4})?)\\b', 'gi');
-
 // -- Name Detection (Heuristic) ----------------------
 const commonFirstNames = new Set([
   // Western - Male
@@ -661,14 +642,11 @@ const commonFirstNames = new Set([
   'adaeze','emeka','amara','tendai','thandiwe','sipho','zuri','imani','jelani','asha',
   'jabari','kamau','kwesi','thembi','thabo','adeyemi','adekunle'
 ]);
-
 const nameSuffixes = new Set(['jr','jr.','sr','sr.','ii','iii','iv','esq','esq.','phd','md','jd']);
-
 const legalTitles = new Set([
   'judge','justice','attorney','counsel','plaintiff','defendant','petitioner',
   'respondent','appellant','appellee','magistrate','honorable','hon.'
 ]);
-
 // -- Stop-Words: NEVER classify these as person names or org aliases --
 const nameStopWords = new Set([
   // Medical / scientific terms
@@ -726,28 +704,21 @@ const nameStopWords = new Set([
   'northern','southern','superior','supreme','circuit','district','appellate','juvenile',
   'probate','bankruptcy','administrative','regulatory','legislative','executive','judicial'
 ]);
-
 function detectNames(text) {
   const results = [];
   const seen = new Set();
   const knownSurnames = new Set();
-
   // Unicode character class ranges for international name support (Latin-1 Supplement)
-  // Uppercase: A-Z + accented uppercase (À-Ö, Ø-Þ)
-  // Lowercase: a-z + accented lowercase (ß-ö, ø-ÿ, ñ)
   const U = "A-Z\u00C0-\u00D6\u00D8-\u00DE";
   const L = "a-z\u00DF-\u00F6\u00F8-\u00FF";
-
-  // Build surname fragment for new RegExp() - handles compound surnames with diacritics
-  // O'Brien | McCarthy | Van der Berg | hyphenated | St. Claire
+  // Build surname fragment for new RegExp()
   const SF = "(?:" +
-    "(?:O['\u2019][" + U + "][" + L + "]+)" +               // O'Brien, O'Malley
-    "|(?:(?:Mc|Mac)[" + U + "][" + L + "]+)" +               // McCarthy, MacDonald
-    "|(?:(?:Van|Von|De|Di|La|Le|Del|Della|El|Al|St\\.?)\\s+(?:[" + L + "]+\\s+)*[" + U + "][" + L + "]+)" + // Van der Berg, De la Cruz
-    "|(?:[" + U + "][" + L + "]{1,20}(?:-[" + U + "][" + L + "]{1,20})*))" ; // Smith, García, Osei-Mensah
-  const SX = "(?:\\s+(?:Jr|Sr|II|III|IV|Esq)\\.?)?";  // optional suffix
-
-  // Strategy 1: Title + Name pattern (Dr. Patricia Nakamura, etc.)
+    "(?:O['\u2019][" + U + "][" + L + "]+)" +
+    "|(?:(?:Mc|Mac)[" + U + "][" + L + "]+)" +
+    "|(?:(?:Van|Von|De|Di|La|Le|Del|Della|El|Al|St\\.?)\\s+(?:[" + L + "]+\\s+)*[" + U + "][" + L + "]+)" +
+    "|(?:[" + U + "][" + L + "]{1,20}(?:-[" + U + "][" + L + "]{1,20})*))" ;
+  const SX = "(?:\\s+(?:Jr|Sr|II|III|IV|Esq)\\.?)?";
+  // Strategy 1: Title + Name pattern
   const titledPattern = new RegExp("(?:Mr|Mrs|Ms|Dr|Prof|Hon|Judge|Justice|Attorney|Atty|Rev)\\.?\\s+([" + U + "][" + L + "]{1,20}(?:\\s+[" + U + "]\\.?)?\\s+" + SF + SX + ")", "g");
   let match;
   while ((match = titledPattern.exec(text)) !== null) {
@@ -755,7 +726,6 @@ function detectNames(text) {
     if (!seen.has(key)) {
       seen.add(key);
       results.push({ text: match[0], start: match.index, end: match.index + match[0].length, type: 'PERSON' });
-      // Track surname - extract last meaningful word(s)
       const fullText = match[0].trim();
       const words = fullText.split(/\s+/);
       if (words.length >= 2) {
@@ -774,9 +744,7 @@ function detectNames(text) {
       }
     }
   }
-
-  // Strategy 2a: Three-word names FIRST (Rajesh Kumar Patel, Mary Jane Watson)
-  // Run before two-word to prevent two-word from consuming three-word matches
+  // Strategy 2a: Three-word names FIRST
   const threeWordPattern = new RegExp("\\b([" + U + "][" + L + "]{1,20})[ \\t]+([" + U + "][" + L + "]{1,20})[ \\t]+(" + SF + ")" + SX + "\\b", "g");
   while ((match = threeWordPattern.exec(text)) !== null) {
     const firstName = match[1].toLowerCase();
@@ -795,17 +763,15 @@ function detectNames(text) {
             results.push({ text: match[0].trim(), start: match.index, end: match.index + match[0].length, type: 'PERSON' });
             const words = match[0].trim().split(/\s+/);
             knownSurnames.add(words[words.length - 1]);
-            knownSurnames.add(words[1]); // middle name as possible surname
+            knownSurnames.add(words[1]);
           }
         }
       }
     } else {
-      // Reset lastIndex to retry from next character (prevent skipping valid pairs)
       threeWordPattern.lastIndex = match.index + 1;
     }
   }
-
-  // Strategy 2b: CommonFirstName + Surname (handles compound surnames with diacritics)
+  // Strategy 2b: CommonFirstName + Surname
   const simpleNamePattern = new RegExp("\\b([" + U + "][" + L + "]{1,20})[ \\t]+(" + SF + ")" + SX + "\\b", "g");
   while ((match = simpleNamePattern.exec(text)) !== null) {
     const firstName = match[1].toLowerCase();
@@ -829,17 +795,14 @@ function detectNames(text) {
         }
       }
     } else {
-      // Reset lastIndex to retry from next character (prevent "Attorney Sarah" consuming "Sarah Goldstein")
       simpleNamePattern.lastIndex = match.index + 1;
     }
   }
-
   // Strategy 3: ALL CAPS names (JAMES RICHARDSON, PATRICIA NAKAMURA)
   const allCapsPattern = /\b([A-Z]{2,20})[ \t]+([A-Z]{2,20})\b/g;
   while ((match = allCapsPattern.exec(text)) !== null) {
     const firstLower = match[1].toLowerCase();
     if (commonFirstNames.has(firstLower)) {
-      // Exclude common all-caps non-name pairs
       const skipWords = new Set(['the','and','for','not','but','are','was','has','had','will','can','may','its','all','any','per','via']);
       if (!skipWords.has(match[2].toLowerCase()) && !nameStopWords.has(match[1].toLowerCase()) && !nameStopWords.has(match[2].toLowerCase())) {
         const key = match.index + ':' + match[0];
@@ -848,20 +811,18 @@ function detectNames(text) {
           if (!overlaps) {
             seen.add(key);
             results.push({ text: match[0], start: match.index, end: match.index + match[0].length, type: 'PERSON' });
-            // Track surname (title case it for standalone matching)
             const surnameTC = match[2].charAt(0) + match[2].slice(1).toLowerCase();
             knownSurnames.add(surnameTC);
-            knownSurnames.add(match[2]); // also keep ALL CAPS version
+            knownSurnames.add(match[2]);
           }
         }
       }
     }
   }
-
-  // Strategy 4: Surname tracking &mdash; catch standalone uses of known surnames
+  // Strategy 4: Surname tracking — catch standalone uses of known surnames
   for (const surname of knownSurnames) {
-    if (surname.length < 3) continue; // skip very short
-    if (nameStopWords.has(surname.toLowerCase())) continue; // skip stop words
+    if (surname.length < 3) continue;
+    if (nameStopWords.has(surname.toLowerCase())) continue;
     const surnameRegex = new RegExp('\\b' + escapeRegex(surname) + '\\b', 'g');
     while ((match = surnameRegex.exec(text)) !== null) {
       const overlaps = results.some(r =>
@@ -873,7 +834,6 @@ function detectNames(text) {
       }
     }
   }
-
   // Strategy 5: Title + known surname (Judge Smith, Attorney Roberts)
   for (const surname of knownSurnames) {
     if (surname.length < 3) continue;
@@ -888,15 +848,11 @@ function detectNames(text) {
       }
     }
   }
-
   return results;
 }
-
 // -- Organization Detection --------------------------
 function detectOrgs(text) {
   const results = [];
-
-  // Contract defined terms that appear capitalized but aren't entity names
   const contractDefinedTerms = new Set([
     'vendor','company','client','customer','contractor','subcontractor','supplier','buyer','seller',
     'licensor','licensee','lessee','lessor','tenant','landlord','borrower','lender','employer','employee',
@@ -916,12 +872,9 @@ function detectOrgs(text) {
     'petitioner','petitioners','respondent','respondents','appellant','appellants','appellee','appellees',
     'closing','chief','senior','junior','master'
   ]);
-
   const fillerWords = new Set(['the','a','an','to','of','by','for','in','on','at','with','and','or','its','such','said','any','all','each','this','that','if','as','when','where','whether','unless','until','upon','per','via','through','under','over','between','among','within','without','against','toward','about','after','before','during','since','than','nor','so','yet','both','either','neither','no','not','into','onto','from']);
-
   const orgSuffixList = ['Inc','LLC','LLP','Corp','Corporation','Company','Co','Ltd','Limited','Partners','Partnership','Group','Associates','Bank','Trust','Fund','Foundation','Institute','University','College','Hospital','Authority','Commission','Board','Agency','Department','Committee','Council','Association','Society'];
-
-  // Pattern A: Ampersand orgs &mdash; "Sullivan & Park LLP"
+  // Pattern A: Ampersand orgs — "Sullivan & Park LLP"
   const ampOrgRegex = /\b([A-Z][A-Za-z]+)\s*&\s*([A-Z][A-Za-z]+)\s+(Inc|LLC|LLP|Corp|Corporation|Company|Co|Ltd|Limited|Partners|Partnership|Group|Associates|Bank|Trust|Fund|Foundation)\.?\b/g;
   let match;
   while ((match = ampOrgRegex.exec(text)) !== null) {
@@ -932,21 +885,16 @@ function detectOrgs(text) {
       type: 'ORG'
     });
   }
-
-  // Pattern B: Standard suffix orgs (1-5 capitalized words + suffix)
+  // Pattern B: Standard suffix orgs
   const orgSuffixes = /\b((?:[A-Z][A-Za-z]+[ \t]+){0,4}[A-Z][A-Za-z]+[ \t]+(?:Inc|LLC|LLP|Corp|Corporation|Company|Co|Ltd|Limited|Partners|Partnership|Group|Associates|Bank|Trust|Fund|Foundation|Institute|University|College|Hospital|Authority|Commission|Board|Agency|Department|Committee|Council|Association|Society)\.?)\b/g;
   while ((match = orgSuffixes.exec(text)) !== null) {
     const orgText = match[1].trim();
     if (orgText.split(/\s+/).length > 6) continue;
-
     const orgWords = orgText.split(/\s+/);
     const allContractTerms = orgWords.every(w => contractDefinedTerms.has(w.toLowerCase()) || fillerWords.has(w.toLowerCase()) || orgSuffixList.some(s => s.toLowerCase() === w.toLowerCase().replace('.', '')));
     if (allContractTerms) continue;
-
     const nonSuffixWords = orgWords.filter(w => !orgSuffixList.some(s => s.toLowerCase() === w.toLowerCase().replace('.', '')));
     if (nonSuffixWords.length > 0 && fillerWords.has(nonSuffixWords[0].toLowerCase())) continue;
-
-    // Check not overlapping with ampersand match
     const overlaps = results.some(r =>
       (match.index >= r.start && match.index < r.end) ||
       (r.start >= match.index && r.start < match.index + match[0].length)
@@ -955,10 +903,8 @@ function detectOrgs(text) {
       results.push({ text: orgText, start: match.index, end: match.index + match[0].length, type: 'ORG' });
     }
   }
-
   // Pattern C: "X Technologies" style
   const techOrgs = /\b([A-Z][A-Za-z]+(?:[ \t]+[A-Z][A-Za-z]+)*[ \t]+(?:Technologies|Technology|Tech|Systems|Solutions|Software|Ventures|Capital|Advisors|Holdings|Consulting|Services|Labs|Laboratories|Media|Digital|Analytics|Therapeutics|Pharmaceuticals|Biotech|Dynamics|Robotics|Electronics|Semiconductor|Networks|Communications|Entertainment|Studios|Productions|Brands|Industries|Manufacturing|Energy|Resources|Healthcare|Financial))\b/g;
-
   const notOrgFirstWords = new Set([
     'the','this','that','these','those','such','any','all','each','every','some','no','my','your','our','their','its',
     'developed','updated','advanced','applied','custom','general','national','international','federal','state','local',
@@ -988,7 +934,6 @@ function detectOrgs(text) {
     'claimant','claimants','petitioner','petitioners','respondent','respondents',
     'appellant','appellants','appellee','appellees'
   ]);
-
   while ((match = techOrgs.exec(text)) !== null) {
     const firstWord = match[1].trim().split(/\s+/)[0].toLowerCase();
     if (notOrgFirstWords.has(firstWord)) continue;
@@ -1000,10 +945,8 @@ function detectOrgs(text) {
       results.push({ text: match[1].trim(), start: match.index, end: match.index + match[0].length, type: 'ORG' });
     }
   }
-
   return results;
 }
-
 // -- Main Sanitization Engine ------------------------
 function sanitize() {
   const text = document.getElementById('inputText').value;
@@ -1011,7 +954,6 @@ function sanitize() {
   detections = [];
   const counters = {};
   const entityMap = {};
-
   // Run pattern-based detection
   for (const [type, {regex, label}] of Object.entries(patterns)) {
     regex.lastIndex = 0;
@@ -1020,19 +962,16 @@ function sanitize() {
       detections.push({ text: match[0], start: match.index, end: match.index + match[0].length, type: type });
     }
   }
-
-  // Run address detection (separate regexes)
+  // Run address detection
   for (const addrRegex of [addressRegexFull, addressRegexPartial, addressRegexContextual]) {
     addrRegex.lastIndex = 0;
     let match;
     while ((match = addrRegex.exec(text)) !== null) {
-      // Extra guard: skip if the matched number is preceded by a period (section number like "3.1")
       if (match.index > 0 && text[match.index - 1] === '.') continue;
-      // Skip if the number part looks like a section number (e.g., starts with single digit followed by non-address content)
       const numMatch = match[0].match(/^(\d+)/);
       if (numMatch) {
         const afterNum = match.index + numMatch[0].length;
-        if (afterNum < text.length && text[afterNum] === '.') continue; // "3." - section number
+        if (afterNum < text.length && text[afterNum] === '.') continue;
       }
       const overlaps = detections.some(d =>
         d.type === 'ADDRESS' &&
@@ -1044,13 +983,10 @@ function sanitize() {
       }
     }
   }
-
   // Run name detection
   detections.push(...detectNames(text));
-
   // Run org detection
   detections.push(...detectOrgs(text));
-
   // -- Alias Detection for Orgs --
   const knownOrgNames = new Set();
   const contractTerms = new Set([
@@ -1073,7 +1009,6 @@ function sanitize() {
     'new','old','key','top','end','set','run','use','net','per'
   ]);
   const orgSuffixes2 = new Set(['inc','llc','llp','corp','corporation','company','co','ltd','limited','partners','partnership','group','associates','technologies','technology']);
-
   for (const d of detections) {
     if (d.type === 'ORG') {
       const words = d.text.split(/\s+/);
@@ -1082,13 +1017,12 @@ function sanitize() {
         const firstWord = significant[0].toLowerCase();
         if (contractTerms.has(firstWord)) continue;
         if (significant[0].length < 4 || tooGenericForAlias.has(firstWord)) continue;
-        if (nameStopWords.has(firstWord)) continue; // stop-word guard
+        if (nameStopWords.has(firstWord)) continue;
         knownOrgNames.add(significant[0]);
         if (significant.length > 1) knownOrgNames.add(significant.slice(0, 2).join(' '));
       }
     }
   }
-
   for (const alias of knownOrgNames) {
     const aliasRegex = new RegExp('\\b' + alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "(?:'s)?\\b", 'g');
     let match;
@@ -1102,10 +1036,8 @@ function sanitize() {
       }
     }
   }
-
-  // Sort by position (longest first for overlaps)
+  // Sort by position
   detections.sort((a, b) => a.start - b.start || b.end - a.end);
-
   // Remove overlapping detections
   const filtered = [];
   let lastEnd = -1;
@@ -1119,7 +1051,6 @@ function sanitize() {
   renderDetections();
   renderOutput();
 }
-
 function getPlaceholder(detection, entityMap, counters) {
   const key = detection.text.toLowerCase().replace(/'s$/, '');
   if (entityMap[key]) return entityMap[key];
@@ -1129,25 +1060,21 @@ function getPlaceholder(detection, entityMap, counters) {
   entityMap[key] = placeholder;
   return placeholder;
 }
-
 function renderOutput() {
   const text = document.getElementById('inputText').value;
   const outputArea = document.getElementById('outputArea');
   const counters = {};
   const entityMap = {};
   const activeDetections = detections.filter(d => enabledCategories.has(d.type));
-
   if (activeDetections.length === 0) {
     outputArea.innerHTML = text || '<div class="empty-state">Sanitized document will appear here after scanning.</div>';
     document.getElementById('outputCount').textContent = '';
     document.getElementById('exportBtn').disabled = true;
     return;
   }
-
   let html = '';
   let plainText = '';
   let lastIndex = 0;
-
   for (const d of activeDetections) {
     const before = text.substring(lastIndex, d.start);
     const placeholder = getPlaceholder(d, entityMap, counters);
@@ -1158,14 +1085,12 @@ function renderOutput() {
   }
   html += escapeHtml(text.substring(lastIndex));
   plainText += text.substring(lastIndex);
-
   outputArea.innerHTML = html;
   outputArea.dataset.plainText = plainText;
   const count = activeDetections.length;
   document.getElementById('outputCount').textContent = `${count} redaction${count !== 1 ? 's' : ''}`;
   document.getElementById('exportBtn').disabled = false;
 }
-
 function renderDetections() {
   const panel = document.getElementById('detectionsPanel');
   const list = document.getElementById('detectionList');
@@ -1173,14 +1098,12 @@ function renderDetections() {
   const togglesEl = document.getElementById('categoryToggles');
   panel.style.display = detections.length > 0 ? 'block' : 'none';
   countEl.textContent = `${detections.length} found`;
-
   const categories = [...new Set(detections.map(d => d.type))];
   togglesEl.innerHTML = categories.map(cat => {
     const count = detections.filter(d => d.type === cat).length;
     const active = enabledCategories.has(cat) ? 'active' : '';
     return `<button class="toggle ${active}" onclick="toggleCategory('${cat}')">${cat} (${count})</button>`;
   }).join('');
-
   const counters = {};
   const entityMap = {};
   list.innerHTML = detections.map((d, i) => {
@@ -1195,20 +1118,17 @@ function renderDetections() {
     </div>`;
   }).join('');
 }
-
 function toggleCategory(cat) {
   if (enabledCategories.has(cat)) enabledCategories.delete(cat);
   else enabledCategories.add(cat);
   renderDetections();
   renderOutput();
 }
-
 function removeDetection(index) {
   detections.splice(index, 1);
   renderDetections();
   renderOutput();
 }
-
 function addManual() {
   const input = document.getElementById('manualInput');
   const typeSelect = document.getElementById('manualType');
@@ -1244,7 +1164,6 @@ function addManual() {
   renderDetections();
   renderOutput();
 }
-
 function flashMessage(msg) {
   let toast = document.getElementById('toast');
   if (!toast) {
@@ -1258,7 +1177,6 @@ function flashMessage(msg) {
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
 }
-
 // -- Export Functions ---------------------------------
 function toggleExportMenu() {
   const menu = document.getElementById('exportMenu');
@@ -1266,15 +1184,12 @@ function toggleExportMenu() {
   if (btn.disabled) return;
   menu.classList.toggle('open');
 }
-
-// Close dropdown when clicking outside
 document.addEventListener('click', function(e) {
   const dropdown = document.getElementById('exportDropdown');
   if (dropdown && !dropdown.contains(e.target)) {
     document.getElementById('exportMenu').classList.remove('open');
   }
 });
-
 function copyOutput() {
   document.getElementById('exportMenu').classList.remove('open');
   const outputArea = document.getElementById('outputArea');
@@ -1283,7 +1198,6 @@ function copyOutput() {
     flashMessage('Copied to clipboard!');
   });
 }
-
 function downloadOutput() {
   document.getElementById('exportMenu').classList.remove('open');
   const outputArea = document.getElementById('outputArea');
@@ -1297,40 +1211,18 @@ function downloadOutput() {
   URL.revokeObjectURL(url);
   flashMessage('File downloaded!');
 }
-
 // -- Sample Document ---------------------------------
 function loadSample() {
-  document.getElementById('inputText').value = `CONFIDENTIAL &mdash; ATTORNEY WORK PRODUCT
-MEMORANDUM
-TO: Sarah Chen, General Counsel
-FROM: Michael Roberts, Associate
-DATE: February 15, 2026
-RE: Indemnification Analysis &mdash; Nexus AI Inc. / TechForward Partners Acquisition
-PRIVILEGED AND CONFIDENTIAL &mdash; ATTORNEY-CLIENT COMMUNICATION
-I. BACKGROUND
-On January 8, 2026, our client Nexus AI Inc. ("Nexus") entered into a Letter of Intent with TechForward Partners LLC ("TechForward") regarding the proposed acquisition of TechForward's machine learning infrastructure platform. The proposed purchase price is $47,500,000, structured as $35,000,000 in cash and $12,500,000 in Nexus common stock.
-TechForward is incorporated in Delaware and maintains its principal offices at 1847 Innovation Boulevard, Suite 400, San Francisco, CA 94105. The company's CEO, James Richardson (SSN: 459-32-8891), holds approximately 34% of outstanding shares. Co-founder Dr. Patricia Nakamura holds 28%.
-II. KEY CONCERNS
-Following our review of the draft Asset Purchase Agreement (Case No. 2024-CV-08831 (D. Del.)), we have identified several material concerns with the indemnification provisions:
-1. TechForward's representations regarding IP ownership are qualified by a disclosure schedule referencing three pending patent disputes, including litigation filed by Zhang Wei Technologies on March 3, 2025.
-2. The survival period for IP representations (18 months) is shorter than market standard (24-36 months) for transactions of this size.
-3. The indemnification cap of $4,750,000 (10% of purchase price) may be insufficient given the estimated $8,200,000 in potential IP liability exposure.
-Sullivan & Park LLP represented the defendants in a similar matter last year. Judge Smith may need to review the dispute.
-Please contact me at michael.roberts@chenlaw.com or (312) 555-8847 to discuss.
-cc: David Park, Partner
-    Jennifer Liu, Tax Counsel`;
+  document.getElementById('inputText').value = "CONFIDENTIAL \u2014 ATTORNEY WORK PRODUCT\nMEMORANDUM\n\nTO: Sarah Chen, General Counsel\nFROM: Michael Roberts, Associate\nDATE: February 15, 2026\n\nRE: Indemnification Analysis \u2014 Nexus AI Inc. / TechForward Partners Acquisition\n\nPRIVILEGED AND CONFIDENTIAL \u2014 ATTORNEY-CLIENT COMMUNICATION\n\nI. BACKGROUND\n\nOn January 8, 2026, our client Nexus AI Inc. (\"Nexus\") entered into a Letter of Intent with TechForward Partners LLC (\"TechForward\") regarding the proposed acquisition of TechForward's machine learning infrastructure platform. The proposed purchase price is $47,500,000, structured as $35,000,000 in cash and $12,500,000 in Nexus common stock.\n\nTechForward is incorporated in Delaware and maintains its principal offices at 1847 Innovation Boulevard, Suite 400, San Francisco, CA 94105. The company's CEO, James Richardson (SSN: 459-32-8891), holds approximately 34% of outstanding shares. Co-founder Dr. Patricia Nakamura holds 28%.\n\nII. KEY CONCERNS\n\nFollowing our review of the draft Asset Purchase Agreement (Case No. 2024-CV-08831 (D. Del.)), we have identified several material concerns with the indemnification provisions:\n\n1. TechForward's representations regarding IP ownership are qualified by a disclosure schedule referencing three pending patent disputes, including litigation filed by Zhang Wei Technologies on March 3, 2025.\n\n2. The survival period for IP representations (18 months) is shorter than market standard (24-36 months) for transactions of this size.\n\n3. The indemnification cap of $4,750,000 (10% of purchase price) may be insufficient given the estimated $8,200,000 in potential IP liability exposure.\n\nSullivan & Park LLP represented the defendants in a similar matter last year. Judge Smith may need to review the dispute.\n\nPlease contact me at michael.roberts@chenlaw.com or (312) 555-8847 to discuss.\n\ncc: David Park, Partner\n    Jennifer Liu, Tax Counsel";
   sanitize();
 }
-
 // -- Utilities ---------------------------------------
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-
 function clearAll() {
   document.getElementById('inputText').value = '';
   document.getElementById('outputArea').innerHTML = '<div class="empty-state">Sanitized document will appear here after scanning.</div>';
