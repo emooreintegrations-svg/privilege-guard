@@ -482,7 +482,7 @@ Everything runs in your browser. Nothing is transmitted."></textarea>
 </div>
 <script>
 // =======================================================
-// PRIVILEGE GUARD v4 — Client-Side Document Sanitization + NER
+// PRIVILEGE GUARD v4.1 — Client-Side Document Sanitization + NER + Edge Case Fixes
 // =======================================================
 let detections = [];
 let enabledCategories = new Set([
@@ -503,7 +503,7 @@ const patterns = {
     label: 'EIN'
   },
   ACCOUNT: {
-    regex: /\b(?:Account|Acct|Policy|Loan|Mortgage|Tax\s*(?:ID|Parcel)|Parcel|APN|Property\s*ID|Routing|SWIFT|BIC|Sort\s*Code|Reference|File\s*No|Matter\s*No|Member\s*ID|Subscriber\s*ID|Group\s*(?:No|Number|ID|#)|Claim\s*(?:No|Number|ID|#))\s*(?:No\.?|Number|#)?[\s#:]*[\w\-]{4,}\b/gi,
+    regex: /\b(?:Account|Acct|Loan|Mortgage|Tax\s*(?:ID|Parcel)|Parcel|APN|Property\s*ID|Sort\s*Code)\s*(?:No\.?|Number|#)?[\s#:]*[\w\-]{4,}\b|\b(?:Policy|Reference|File|Matter|Member\s*ID|Subscriber\s*ID|Group|Claim)\s+(?:No\.?|Number|ID|#)[\s#:]*[\w\-]{4,}\b/gi,
     label: 'Account #'
   },
   EMAIL: {
@@ -664,6 +664,24 @@ const commonFirstNames = new Set([
   'yoshua','nanjala','dafoe','markus','katarina','wei-lin',
   'allan','bengio','nyabola','sophie','alejandro'
 ]);
+
+// Dual-use surnames: words that are both geographic/common terms AND legitimate surnames.
+// These are allowed through as surnames ONLY when paired with a known first name.
+const dualUseSurnames = new Set([
+  'park','hill','lane','chase','drew','hunter','mason','carter','tyler',
+  'jordan','morgan','taylor','bailey','grant','grace','hope','faith',
+  'joy','may','june','august','mark','bill','frank','reed','cole',
+  'ray','penny','dale','glen','dean','ward','wade','bell','ford',
+  'day','rice','love','stone','frost','beach','field','lake','ridge',
+  'meadow','grove','spring','wells','banks','woods','burns','hayes',
+  'cross','young','long','short','white','black','brown','green','gray',
+  'golden','silver','noble','wolf','fox','bird','crane','swift','archer',
+  'porter','miller','baker','cook','fisher','barber','farmer','gardner',
+  'knight','king','duke','prince','lord','bishop','abbott','christian',
+  'church','temple','chapel','court','cliff','bush','marsh','fields',
+  'rose','lily','ivy','ruby','pearl','amber','jade','holly','hazel',
+  'cherry','sage','olive','heath','kirk','clay','brock','craig','troy','paris'
+]);
 const nameSuffixes = new Set(['jr','jr.','sr','sr.','ii','iii','iv','esq','esq.','phd','md','jd']);
 const legalTitles = new Set([
   'judge','justice','attorney','counsel','plaintiff','defendant','petitioner',
@@ -774,7 +792,7 @@ function detectNames(text) {
     if (commonFirstNames.has(firstName) && !nameStopWords.has(middleName)) {
       const orgWords = new Set(['inc','llc','llp','corp','corporation','company','ltd','limited','partners','partnership','group','associates','technologies','boulevard','street','avenue']);
       const lastPart = match[0].split(/[ \t]+/).pop().replace(/\.?$/, '').toLowerCase();
-      if (!orgWords.has(lastPart) && !nameStopWords.has(lastPart)) {
+      if (!orgWords.has(lastPart) && (!nameStopWords.has(lastPart) || dualUseSurnames.has(lastPart))) {
         const key = match.index + ':' + match[0];
         if (!seen.has(key)) {
           const overlaps = results.some(r =>
@@ -801,7 +819,7 @@ function detectNames(text) {
       const orgWords = new Set(['inc','llc','llp','corp','corporation','company','ltd','limited','partners','partnership','group','associates','technologies','boulevard','street','avenue']);
       const surnameText = match[0].split(/[ \t]+/).slice(1).join(' ').replace(/\s+(?:Jr|Sr|II|III|IV|Esq)\.?$/i, '');
       const lastWord = surnameText.split(/[\s\-]+/).pop().toLowerCase();
-      if (!orgWords.has(lastWord) && !nameStopWords.has(lastWord) && !nameStopWords.has(firstName)) {
+      if (!orgWords.has(lastWord) && (!nameStopWords.has(lastWord) || dualUseSurnames.has(lastWord)) && (!nameStopWords.has(firstName) || dualUseSurnames.has(firstName))) {
         const key = match.index + ':' + match[0];
         if (!seen.has(key)) {
           const overlaps = results.some(r => match.index >= r.start && match.index < r.end);
@@ -826,7 +844,7 @@ function detectNames(text) {
     const firstLower = match[1].toLowerCase();
     if (commonFirstNames.has(firstLower)) {
       const skipWords = new Set(['the','and','for','not','but','are','was','has','had','will','can','may','its','all','any','per','via']);
-      if (!skipWords.has(match[2].toLowerCase()) && !nameStopWords.has(match[1].toLowerCase()) && !nameStopWords.has(match[2].toLowerCase())) {
+      if (!skipWords.has(match[2].toLowerCase()) && (!nameStopWords.has(match[1].toLowerCase()) || dualUseSurnames.has(match[1].toLowerCase())) && (!nameStopWords.has(match[2].toLowerCase()) || dualUseSurnames.has(match[2].toLowerCase()))) {
         const key = match.index + ':' + match[0];
         if (!seen.has(key)) {
           const overlaps = results.some(r => match.index >= r.start && match.index < r.end);
@@ -870,6 +888,29 @@ function detectNames(text) {
       }
     }
   }
+
+  // Strategy 6: Title + single capitalized word (Judge Smith, Attorney Chen)
+  // Lower confidence than Strategy 1, so runs last. Only triggers when the
+  // word after the title isn't in stop words or contract terms.
+  const titleSingleRegex = new RegExp("(?:Mr|Mrs|Ms|Dr|Prof|Professor|Hon|Judge|Justice|Attorney|Atty|Rev|CEO|President|VP|CFO|CTO|COO|CIO|CISO|Chairman|Chairwoman|Director|Partner|Principal|Adv|Advocate|Counselor|Magistrate|Founder|Co-Founder|Commissioner|Secretary|Senator|Governor|Mayor|Officer)\\.?\\s+([" + U + "][" + L + "]{2,20})" + SX, "g");
+  while ((match = titleSingleRegex.exec(text)) !== null) {
+    const nameWord = match[1].toLowerCase();
+    if (nameStopWords.has(nameWord) && !dualUseSurnames.has(nameWord)) continue;
+    const titleSingleExclusions = new Set(['agreement','services','department','section','committee','counsel','general','special','medical','legal','financial','technical','executive','senior','junior','associate','assistant','managing','acting','interim','deputy','chief','officer','master','fellow']);
+    if (titleSingleExclusions.has(nameWord)) continue;
+    const key = match.index + ':' + match[0];
+    if (!seen.has(key)) {
+      const overlaps = results.some(r =>
+        (match.index >= r.start && match.index < r.end) ||
+        (r.start >= match.index && r.start < match.index + match[0].length)
+      );
+      if (!overlaps) {
+        seen.add(key);
+        results.push({ text: match[0].trim(), start: match.index, end: match.index + match[0].length, type: 'PERSON' });
+        knownSurnames.add(match[1]);
+      }
+    }
+  }
   return results;
 }
 // -- Organization Detection --------------------------
@@ -892,7 +933,8 @@ function detectOrgs(text) {
     'general','special','consequential','direct','indirect','punitive','aggregate','annual','monthly',
     'defendants','defendant','plaintiffs','plaintiff','claimant','claimants',
     'petitioner','petitioners','respondent','respondents','appellant','appellants','appellee','appellees',
-    'closing','chief','senior','junior','master'
+    'closing','chief','senior','junior','master',
+    'advisory','editorial','executive','review','supervisory'
   ]);
   const fillerWords = new Set(['the','a','an','to','of','by','for','in','on','at','with','and','or','its','such','said','any','all','each','this','that','if','as','when','where','whether','unless','until','upon','per','via','through','under','over','between','among','within','without','against','toward','about','after','before','during','since','than','nor','so','yet','both','either','neither','no','not','into','onto','from']);
   const orgSuffixList = ['Inc','LLC','LLP','Corp','Corporation','Company','Co','Ltd','Limited','Partners','Partnership','Group','Associates','Bank','Trust','Fund','Foundation','Institute','University','College','Hospital','Authority','Commission','Board','Agency','Department','Committee','Council','Association','Society'];
@@ -1015,7 +1057,11 @@ const nerOrgStopWords = new Set([
   'committee','board','council','commission','authority','agency',
   'court','bench','bar','chambers','district','circuit',
   'monday','tuesday','wednesday','thursday','friday','saturday','sunday',
-  'january','february','march','april','may','june','july','august','september','october','november','december'
+  'january','february','march','april','may','june','july','august','september','october','november','december',
+  'consulting','services','professional','advisory','financial','legal','medical',
+  'technical','management','solutions','systems','analytics','operations',
+  'compliance','regulatory','administrative','corporate','strategic','global',
+  'national','international','regional','local','general','special'
 ]);
 // -- NER Detection via Compromise.js ----------------------
 function detectNER(text) {
@@ -1172,6 +1218,13 @@ function sanitize() {
   detections = filtered;
   renderDetections();
   renderOutput();
+  // Show a tip about manual add (first scan only)
+  if (!window._scanTipShown && detections.length > 0) {
+    window._scanTipShown = true;
+    setTimeout(() => {
+      flashMessage('Tip: Use \"+ Add\" to manually flag any names or organizations not automatically detected.');
+    }, 1500);
+  }
 }
 function getPlaceholder(detection, entityMap, counters) {
   const key = detection.text.toLowerCase().replace(/'s$/, '');
@@ -1245,11 +1298,25 @@ function toggleCategory(cat) {
   else enabledCategories.add(cat);
   renderDetections();
   renderOutput();
+  // Show a tip about manual add (first scan only)
+  if (!window._scanTipShown && detections.length > 0) {
+    window._scanTipShown = true;
+    setTimeout(() => {
+      flashMessage('Tip: Use \"+ Add\" to manually flag any names or organizations not automatically detected.');
+    }, 1500);
+  }
 }
 function removeDetection(index) {
   detections.splice(index, 1);
   renderDetections();
   renderOutput();
+  // Show a tip about manual add (first scan only)
+  if (!window._scanTipShown && detections.length > 0) {
+    window._scanTipShown = true;
+    setTimeout(() => {
+      flashMessage('Tip: Use \"+ Add\" to manually flag any names or organizations not automatically detected.');
+    }, 1500);
+  }
 }
 function addManual() {
   const input = document.getElementById('manualInput');
@@ -1285,6 +1352,13 @@ function addManual() {
   flashMessage(`Added ${addedCount} instance${addedCount !== 1 ? 's' : ''} of "${term}"`);
   renderDetections();
   renderOutput();
+  // Show a tip about manual add (first scan only)
+  if (!window._scanTipShown && detections.length > 0) {
+    window._scanTipShown = true;
+    setTimeout(() => {
+      flashMessage('Tip: Use \"+ Add\" to manually flag any names or organizations not automatically detected.');
+    }, 1500);
+  }
 }
 function flashMessage(msg) {
   let toast = document.getElementById('toast');
