@@ -581,7 +581,7 @@ window.nlpAvailable = false;
           <div class="empty-state-primary">Paste text or drop a PDF here</div>
           <div class="empty-state-secondary">Detects names, orgs, emails, phones, SSNs, dates, addresses, and more.</div>
           <div class="empty-state-secondary">Everything runs in your browser. Nothing is transmitted.</div>
-          <div class="empty-state-hint">Text-based PDFs only</div>
+          <div class="empty-state-hint">Text-based PDFs only · Best experience in Chrome or Firefox</div>
         </div>
       </div>
     </div>
@@ -1608,6 +1608,7 @@ const _PDF_WORKER_B64 = 'LyoqCiAqIEBsaWNzdGFydCBUaGUgZm9sbG93aW5nIGlzIHRoZSBlbnR
 
 const PDFLib = {
   loaded: false,
+  workerless: false,
   async init() {
     if (this.loaded) return;
     try {
@@ -1616,10 +1617,16 @@ const PDFLib = {
       const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
       const workerUrl = URL.createObjectURL(workerBlob);
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+      // Test that the worker actually loads (Safari may reject Blob workers)
+      const testWorker = new Worker(workerUrl);
+      testWorker.terminate();
       this.loaded = true;
     } catch (e) {
-      console.error('Failed to initialize PDF.js worker:', e);
-      throw new Error('PDF reader failed to load');
+      console.warn('PDF.js Web Worker unavailable, falling back to workerless mode:', e.message);
+      // Disable worker — PDF.js will run on the main thread (slower but compatible)
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      this.workerless = true;
+      this.loaded = true;
     }
   },
 
@@ -1734,7 +1741,8 @@ const PDFLib = {
       updateEmptyState();
       inputTextarea.classList.add('pdf-success');
       const pageLabel = result.pageCount === 1 ? 'page' : 'pages';
-      flashMessage('PDF loaded! (' + result.pageCount + ' ' + pageLabel + ', ' + result.text.length.toLocaleString() + ' characters)');
+      const compat = PDFLib.workerless ? ' (compatibility mode)' : '';
+      flashMessage('PDF loaded! (' + result.pageCount + ' ' + pageLabel + ', ' + result.text.length.toLocaleString() + ' characters)' + compat);
 
       setTimeout(() => {
         inputTextarea.classList.remove('pdf-success');
