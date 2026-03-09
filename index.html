@@ -86,8 +86,8 @@
     border-radius: 10px;
   }
   .panel-header .count.active {
-    background: #fef3c7;
-    color: #92400e;
+    background: #f3f4f6;
+    color: #6b7280;
   }
   textarea {
     width: 100%;
@@ -120,14 +120,20 @@
     box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
   }
   .output-area .redacted {
-    background: #fef3c7;
-    border: 1px solid #fcd34d;
     border-radius: 3px;
     padding: 1px 4px;
     font-weight: 600;
-    color: #92400e;
     font-size: 12px;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    color: #92400e;
   }
+  .output-area .redacted[data-cat="PERSON"] { background: #dbeafe; border-color: #93c5fd; color: #1e3a5f; }
+  .output-area .redacted[data-cat="ORG"] { background: #ccfbf1; border-color: #5eead4; color: #115e59; }
+  .output-area .redacted[data-cat="DATE"] { background: #e0e7ff; border-color: #a5b4fc; color: #312e81; }
+  .output-area .redacted[data-cat="PHONE"], .output-area .redacted[data-cat="EMAIL"], .output-area .redacted[data-cat="ADDRESS"] { background: #ccfbf1; border-color: #6ee7b7; color: #064e3b; }
+  .output-area .redacted[data-cat="SSN"], .output-area .redacted[data-cat="DOLLAR"], .output-area .redacted[data-cat="ACCOUNT"] { background: #f3e8ff; border-color: #c4b5fd; color: #3b0764; }
+  .output-area .redacted[data-cat="CASE_ID"] { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
   .controls {
     display: flex;
     gap: 10px;
@@ -282,13 +288,13 @@
   .detection-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 6px 4px;
+    padding: 6px 4px 6px 10px;
     margin: 0 -4px;
     border-bottom: 1px solid #f3f4f6;
     border-radius: 4px;
     font-size: 13px;
     transition: background 0.1s;
+    gap: 8px;
   }
   .detection-item:hover {
     background: #f9fafb;
@@ -313,21 +319,20 @@
   }
   .detection-replacement {
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-    background: #fef3c7;
-    color: #92400e;
     padding: 1px 6px;
     border-radius: 3px;
     font-size: 12px;
     font-weight: 600;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #e2e8f0;
   }
-  .detection-type {
-    color: #6b7280;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    min-width: 80px;
-    text-align: right;
-  }
+  .detection-item[data-cat="PERSON"] { border-left: 4px solid #1e3a5f; }
+  .detection-item[data-cat="ORG"] { border-left: 4px solid #2d7d9a; }
+  .detection-item[data-cat="DATE"] { border-left: 4px solid #4338ca; }
+  .detection-item[data-cat="PHONE"], .detection-item[data-cat="EMAIL"], .detection-item[data-cat="ADDRESS"] { border-left: 4px solid #0f766e; }
+  .detection-item[data-cat="SSN"], .detection-item[data-cat="DOLLAR"], .detection-item[data-cat="ACCOUNT"] { border-left: 4px solid #581c87; }
+  .detection-item[data-cat="CASE_ID"] { border-left: 4px solid #475569; }
   .detection-remove {
     background: none;
     border: none;
@@ -336,6 +341,7 @@
     padding: 2px 6px;
     font-size: 16px;
     line-height: 1;
+    margin-left: auto;
   }
   .detection-remove:hover {
     color: #ef4444;
@@ -366,10 +372,15 @@
     transition: all 0.15s;
   }
   .toggle.active {
-    background: #1a1a1a;
     color: white;
-    border-color: #1a1a1a;
+    border-color: transparent;
   }
+  .toggle.active[data-cat="PERSON"] { background: #1e3a5f; }
+  .toggle.active[data-cat="ORG"] { background: #2d7d9a; }
+  .toggle.active[data-cat="DATE"] { background: #4338ca; }
+  .toggle.active[data-cat="PHONE"], .toggle.active[data-cat="EMAIL"], .toggle.active[data-cat="ADDRESS"] { background: #0f766e; }
+  .toggle.active[data-cat="SSN"], .toggle.active[data-cat="DOLLAR"], .toggle.active[data-cat="ACCOUNT"] { background: #581c87; }
+  .toggle.active[data-cat="CASE_ID"] { background: #475569; }
   .manual-add {
     display: flex;
     gap: 8px;
@@ -470,7 +481,6 @@ Everything runs in your browser. Nothing is transmitted."></textarea>
       <div class="panel-header">
         <div style="display:flex;align-items:center;gap:8px;">
           Sanitized Output
-          <span class="count" id="outputCount"></span>
         </div>
         <div class="export-dropdown" id="exportDropdown">
           <button class="export-trigger" id="exportBtn" disabled onclick="toggleExportMenu()" title="Export options">
@@ -1270,7 +1280,6 @@ function renderOutput() {
   const activeDetections = detections.filter(d => enabledCategories.has(d.type));
   if (activeDetections.length === 0) {
     outputArea.innerHTML = text || '<div class="empty-state">Sanitized document will appear here after scanning.</div>';
-    document.getElementById('outputCount').textContent = '';
     document.getElementById('exportBtn').disabled = true;
     return;
   }
@@ -1281,7 +1290,7 @@ function renderOutput() {
     const before = text.substring(lastIndex, d.start);
     const placeholder = getPlaceholder(d, entityMap, counters);
     html += escapeHtml(before);
-    html += `<span class="redacted" title="Original: ${escapeHtml(d.text)}">${escapeHtml(placeholder)}</span>`;
+    html += `<span class="redacted" data-cat="${d.type}" title="Original: ${escapeHtml(d.text)}">${escapeHtml(placeholder)}</span>`;
     plainText += before + placeholder;
     lastIndex = d.end;
   }
@@ -1289,8 +1298,6 @@ function renderOutput() {
   plainText += text.substring(lastIndex);
   outputArea.innerHTML = html;
   outputArea.dataset.plainText = plainText;
-  const count = activeDetections.length;
-  document.getElementById('outputCount').textContent = `${count} redaction${count !== 1 ? 's' : ''}`;
   document.getElementById('exportBtn').disabled = false;
 }
 function renderDetections() {
@@ -1304,18 +1311,17 @@ function renderDetections() {
   togglesEl.innerHTML = categories.map(cat => {
     const count = detections.filter(d => d.type === cat).length;
     const active = enabledCategories.has(cat) ? 'active' : '';
-    return `<button class="toggle ${active}" onclick="toggleCategory('${cat}')">${cat} (${count})</button>`;
+    return `<button class="toggle ${active}" data-cat="${cat}" onclick="toggleCategory('${cat}')">${cat} (${count})</button>`;
   }).join('');
   const counters = {};
   const entityMap = {};
   list.innerHTML = detections.map((d, i) => {
     const placeholder = getPlaceholder(d, entityMap, counters);
     const dimmed = !enabledCategories.has(d.type) ? 'opacity:0.35;' : '';
-    return `<div class="detection-item" style="${dimmed}">
+    return `<div class="detection-item" data-cat="${d.type}" style="${dimmed}">
       <span class="detection-original">${escapeHtml(d.text)}</span>
       <span class="detection-arrow">&rarr;</span>
       <span class="detection-replacement">${escapeHtml(placeholder)}</span>
-      <span class="detection-type">${d.type}</span>
       <button class="detection-remove" onclick="removeDetection(${i})" title="Remove this detection">&times;</button>
     </div>`;
   }).join('');
@@ -1451,7 +1457,6 @@ function clearAll() {
   document.getElementById('outputArea').innerHTML = '<div class="empty-state">Sanitized document will appear here after scanning.</div>';
   document.getElementById('outputArea').dataset.plainText = '';
   document.getElementById('detectionsPanel').style.display = 'none';
-  document.getElementById('outputCount').textContent = '';
   document.getElementById('exportBtn').disabled = true;
   document.getElementById('exportMenu').classList.remove('open');
   detections = [];
